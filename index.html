@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alphabet Place Value Trainer</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+            --success: #22c55e;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            position: relative;
+        }
+
+        /* Utility */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            max-width: 90%;
+            width: 320px;
+            transform: scale(0.9);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.show .modal-content {
+            transform: scale(1);
+        }
+
+        .final-score-label {
+            color: var(--text-light);
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .final-score-value {
+            font-size: 5rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 2rem;
+        }
+
+        /* Timer Styles */
+        .timer-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .timer-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .timer-circle-bg {
+            fill: none;
+            stroke: #e5e7eb;
+            stroke-width: 4;
+        }
+
+        .timer-circle-progress {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 4;
+            stroke-linecap: round;
+            stroke-dasharray: 113; /* 2 * pi * 18 */
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.05s linear, stroke 0.2s;
+        }
+
+        .timer-text {
+            position: absolute;
+            font-weight: 800;
+            color: var(--text-light);
+            font-size: 1.5rem;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            text-align: center;
+            width: 100%;
+            max-width: 360px;
+            transition: transform 0.2s;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: var(--text);
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+        
+        p.subtitle {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+
+        /* Start Screen specific */
+        .instruction-list {
+            text-align: left;
+            margin: 2rem 0;
+            padding: 0;
+            list-style: none;
+            display: inline-block;
+        }
+
+        .instruction-list li {
+            margin-bottom: 0.8rem;
+            color: var(--text);
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon-large {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .stats-container {
+            display: flex;
+            justify-content: space-between;
+            background-color: #f9fafb;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--primary);
+        }
+
+        .letter-display {
+            font-size: 8rem;
+            line-height: 1;
+            font-weight: 800;
+            margin: 1rem 0;
+            color: var(--text);
+            height: 140px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: color 0.2s, transform 0.2s;
+            user-select: none;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 1rem;
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            border: 3px solid #e5e7eb;
+            border-radius: 1rem;
+            outline: none;
+            box-sizing: border-box;
+            color: var(--text);
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Remove spinner from number input */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .message {
+            min-height: 1.5rem;
+            margin-top: 1rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: pre-wrap; /* Allows line breaks */
+        }
+
+        .hint-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-top: 1.5rem;
+            text-decoration: none;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .hint-btn:hover {
+            color: var(--primary);
+        }
+
+        /* Animations */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        .bounce {
+            animation: bounce 0.5s;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-20px);}
+            60% {transform: translateY(-10px);}
+        }
+        
+        /* Mobile optimization */
+        @media (max-width: 400px) {
+            .container {
+                padding: 1.5rem;
+                border-radius: 0;
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                box-shadow: none;
+            }
+            .letter-display {
+                font-size: 6rem;
+                height: 100px;
+            }
+            .timer-container {
+                top: 10px;
+                left: 10px;
+                width: 50px;
+                height: 50px;
+            }
+            .timer-text {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Start Screen -->
+<div id="start-screen" class="container">
+    <h1>Alphabet Mastery</h1>
+    <p class="subtitle">A=1, B=2, ... Z=26</p>
+    
+    <div style="margin: 1.5rem 0;">
+        <span class="icon-large">🧠</span>
+        <ul class="instruction-list">
+            <li>⏱️ <strong>3 Seconds</strong> per letter</li>
+            <li>🔥 Build your <strong>Streak</strong></li>
+            <li>💡 Use <strong>Hints</strong> if stuck</li>
+        </ul>
+    </div>
+
+    <button class="btn" onclick="startGame()">Start Training</button>
+</div>
+
+<!-- Timer Component (Initially Hidden) -->
+<div id="timer-ui" class="timer-container hidden">
+    <svg class="timer-svg" viewBox="0 0 40 40">
+        <circle class="timer-circle-bg" cx="20" cy="20" r="18"></circle>
+        <circle id="timer-progress" class="timer-circle-progress" cx="20" cy="20" r="18"></circle>
+    </svg>
+    <span id="timer-text" class="timer-text">3</span>
+</div>
+
+<!-- Game Over Modal -->
+<div id="game-over-modal" class="modal-overlay">
+    <div class="modal-content">
+        <h2>Time's Up!</h2>
+        <div class="final-score-label">Final Score</div>
+        <div id="final-score-display" class="final-score-value">0</div>
+        <button id="restart-btn" class="btn" onclick="restartGame()">Play Again</button>
+    </div>
+</div>
+
+<!-- Game Interface (Initially Hidden) -->
+<div class="container hidden" id="game-container">
+    <h1>Letter Trainer</h1>
+    <p class="subtitle">Speed Drill: 3 seconds!</p>
+    
+    <div class="stats-container">
+        <div class="stat-box">
+            <span class="stat-label">Streak</span>
+            <span id="streak" class="stat-value">0</span>
+        </div>
+        <div class="stat-box">
+            <span class="stat-label">Best</span>
+            <span id="high-score" class="stat-value">0</span>
+        </div>
+    </div>
+
+    <div id="letter-display" class="letter-display">A</div>
+
+    <div class="input-group">
+        <input type="number" id="user-input" placeholder="?" autocomplete="off" inputmode="numeric">
+    </div>
+    
+    <button class="btn" onclick="checkAnswer()">Submit</button>
+    
+    <div id="message" class="message"></div>
+    
+    <button class="hint-btn" onclick="showHint()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        Need a hint?
+    </button>
+</div>
+
+<script>
+    // Game State
+    let currentLetter = '';
+    let currentStreak = 0;
+    let highScore = 0;
+    let isProcessing = false;
+    
+    // Timer State
+    const TIME_LIMIT_MS = 3000;
+    let timerInterval;
+    let timeLeft = TIME_LIMIT_MS;
+
+    // DOM Elements
+    const startScreen = document.getElementById('start-screen');
+    const gameContainer = document.getElementById('game-container');
+    const timerUI = document.getElementById('timer-ui');
+    
+    const letterDisplay = document.getElementById('letter-display');
+    const userInput = document.getElementById('user-input');
+    const messageEl = document.getElementById('message');
+    const streakEl = document.getElementById('streak');
+    const highScoreEl = document.getElementById('high-score');
+    const container = document.getElementById('game-container');
+    const timerPath = document.getElementById('timer-progress');
+    const timerText = document.getElementById('timer-text');
+    
+    // Modal Elements
+    const modal = document.getElementById('game-over-modal');
+    const restartBtn = document.getElementById('restart-btn');
+    const finalScoreDisplay = document.getElementById('final-score-display');
+
+    // Load high score from local storage if available
+    const savedScore = localStorage.getItem('alphabet-high-score');
+    if (savedScore) {
+        highScore = parseInt(savedScore);
+        highScoreEl.innerText = highScore;
+    }
+
+    // Event Listener for "Enter" key
+    userInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            checkAnswer();
+        }
+    });
+
+    function startGame() {
+        // Hide Start Screen
+        startScreen.classList.add('hidden');
+        
+        // Show Game Elements
+        gameContainer.classList.remove('hidden');
+        timerUI.classList.remove('hidden');
+        
+        // Start Game Logic
+        generateLetter();
+    }
+
+    function startTimer() {
+        const startTime = Date.now();
+        const totalLength = 113; // 2 * pi * 18 approx
+        
+        // Reset Timer UI
+        timerPath.style.stroke = "var(--primary)";
+        timerPath.style.strokeDashoffset = 0;
+        timerText.innerText = Math.ceil(TIME_LIMIT_MS / 1000);
+        
+        clearInterval(timerInterval);
+
+        timerInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            timeLeft = Math.max(0, TIME_LIMIT_MS - elapsed);
+            
+            // Update Text
+            timerText.innerText = Math.ceil(timeLeft / 1000);
+            
+            // Update Circle Progress
+            const offset = (elapsed / TIME_LIMIT_MS) * totalLength;
+            timerPath.style.strokeDashoffset = offset;
+            
+            // Warning Color
+            if (timeLeft < 1000) {
+                timerPath.style.stroke = "var(--error)";
+            }
+
+            // Timeout Logic
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                handleTimeout();
+            }
+        }, 30); // Update frequency
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+    }
+
+    function handleTimeout() {
+        if (isProcessing) return; // Prevent double trigger
+        isProcessing = true;
+        
+        stopTimer(); // Ensure timer stops
+        userInput.blur();
+        
+        const correctVal = currentLetter.charCodeAt(0) - 64;
+        
+        // UI Feedback (Background)
+        letterDisplay.style.color = "var(--error)";
+        messageEl.innerText = `Time's Up! It was ${correctVal}`;
+        messageEl.style.color = "var(--error)";
+        
+        // Show Modal
+        finalScoreDisplay.innerText = currentStreak;
+        modal.style.display = 'flex';
+        
+        // Trigger reflow/animation
+        setTimeout(() => {
+            modal.classList.add('show');
+            restartBtn.focus(); // Focus button so Enter key works
+        }, 10);
+    }
+    
+    function restartGame() {
+        // Hide Modal
+        modal.classList.remove('show');
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            // Reset Game Logic
+            currentStreak = 0;
+            updateStats();
+            generateLetter();
+        }, 200); // Wait for transition
+    }
+
+    function generateLetter() {
+        // Generate random number between 0 and 25
+        let randomNum = Math.floor(Math.random() * 26);
+        let newLetter = String.fromCharCode(65 + randomNum);
+        
+        // Avoid repeating the same letter twice immediately
+        while (newLetter === currentLetter) {
+            randomNum = Math.floor(Math.random() * 26);
+            newLetter = String.fromCharCode(65 + randomNum);
+        }
+        
+        currentLetter = newLetter;
+        
+        // Update UI
+        letterDisplay.innerText = currentLetter;
+        letterDisplay.style.color = "var(--text)";
+        letterDisplay.classList.remove('bounce'); // Ensure clean state
+        userInput.value = '';
+        messageEl.innerText = '';
+        userInput.focus();
+        isProcessing = false;
+        
+        // Start the timer
+        startTimer();
+    }
+
+    function checkAnswer() {
+        if (isProcessing) return;
+        
+        const userVal = parseInt(userInput.value);
+        const correctVal = currentLetter.charCodeAt(0) - 64; // A(65) - 64 = 1
+
+        if (isNaN(userVal)) {
+            messageEl.innerText = "Type a number!";
+            messageEl.style.color = "var(--text-light)";
+            return;
+        }
+
+        stopTimer(); // Stop timer immediately on submission
+        isProcessing = true;
+
+        if (userVal === correctVal) {
+            handleSuccess();
+        } else {
+            handleFailure(correctVal);
+        }
+    }
+
+    function handleSuccess() {
+        // UI Feedback
+        letterDisplay.style.color = "var(--success)";
+        letterDisplay.classList.add('bounce');
+        messageEl.innerText = getRandomPraise();
+        messageEl.style.color = "var(--success)";
+        
+        // Update Stats
+        currentStreak++;
+        if (currentStreak > highScore) {
+            highScore = currentStreak;
+            localStorage.setItem('alphabet-high-score', highScore);
+        }
+        updateStats();
+
+        // Remove bounce class after animation
+        setTimeout(() => {
+            letterDisplay.classList.remove('bounce');
+        }, 500);
+
+        // Next Question after short delay
+        setTimeout(generateLetter, 600);
+    }
+
+    function handleFailure(correctAnswer) {
+        // UI Feedback
+        letterDisplay.style.color = "var(--error)";
+        messageEl.innerText = `Wrong! ${currentLetter} is ${correctAnswer}`;
+        messageEl.style.color = "var(--error)";
+        
+        // Shake Animation
+        container.classList.add('shake');
+        setTimeout(() => {
+            container.classList.remove('shake');
+        }, 500);
+
+        // Reset Streak (Soft Reset - allows continuing)
+        currentStreak = 0;
+        updateStats();
+        
+        // Clear input to try again
+        userInput.value = '';
+        
+        // Allow time to read the correction before generating new letter
+        setTimeout(() => {
+             generateLetter();
+        }, 2000);
+    }
+
+    function updateStats() {
+        streakEl.innerText = currentStreak;
+        highScoreEl.innerText = highScore;
+    }
+
+    function showHint() {
+        const val = currentLetter.charCodeAt(0) - 64;
+        let hint = "";
+        
+        // Comprehensive hints
+        if (["E", "J", "O", "T", "Y"].includes(currentLetter)) hint = "Part of EJOTY (Multiples of 5)";
+        else if (currentLetter === "F") hint = "F sounds like Fix (6)";
+        else if (currentLetter === "G") hint = "Look at the tail (It draws a 7)";
+        else if (currentLetter === "H") hint = "Connect top and bottom (It becomes 8)";
+        else if (currentLetter === "I") hint = "Cursive I looks like 9";
+        else if (currentLetter === "K") hint = "Kings XI or two straight lines (11)";
+        else if (currentLetter === "L") hint = "L is for Lunch at 12";
+        else if (currentLetter === "M") hint = "Rotate 90° clockwise (Looks like 3 → 13)";
+        else if (currentLetter === "N") hint = "November 14 (Children's Day)";
+        else if (currentLetter === "P") hint = "Inverted 6 (16)";
+        else if (currentLetter === "Q") hint = "Question 17 or Queen";
+        else if (currentLetter === "R") hint = "Close the bottom loop (Becomes 8 → 18)";
+        else if (currentLetter === "S") hint = "Before T-20 (19)";
+        else if (currentLetter === "U") hint = "Under 21";
+        else if (currentLetter === "V") hint = "Victory sign (2 fingers → 22)";
+        else if (currentLetter === "W") hint = "Rotate 90° counter-clockwise (Looks like 3 → 23)";
+        else if (val <= 13) hint = "It's in the first half (1-13)";
+        else hint = "It's in the second half (14-26)";
+
+        messageEl.innerText = hint;
+        messageEl.style.color = "var(--text-light)";
+        userInput.focus();
+    }
+    
+    function getRandomPraise() {
+        const praises = ["Correct!", "Nice!", "Spot on!", "Great!", "Fast!", "Perfect!"];
+        return praises[Math.floor(Math.random() * praises.length)];
+    }
+</script>
+
+</body>
+</html>
