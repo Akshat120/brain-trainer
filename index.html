@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Optimization: Prevent zooming and handle mobile scaling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Alphabet Place Value Trainer</title>
     <style>
         :root {
@@ -16,82 +17,36 @@
             --error: #ef4444;
         }
 
+        html {
+            /* Optimization: Prevent pull-to-refresh which ruins web apps */
+            overscroll-behavior: none; 
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            /* Optimization: dvh handles mobile address bars better than vh */
+            min-height: 100dvh; 
             margin: 0;
             position: relative;
+            /* Optimization: Fix sticky tap highlight on mobile */
+            -webkit-tap-highlight-color: transparent; 
         }
 
         /* Utility */
-        .hidden {
-            display: none !important;
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(4px);
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-
-        .modal-overlay.show {
-            opacity: 1;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 2.5rem;
-            border-radius: 1.5rem;
-            text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            max-width: 90%;
-            width: 320px;
-            transform: scale(0.9);
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .modal-overlay.show .modal-content {
-            transform: scale(1);
-        }
-
-        .final-score-label {
-            color: var(--text-light);
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-        }
-
-        .final-score-value {
-            font-size: 5rem;
-            font-weight: 800;
-            color: var(--primary);
-            line-height: 1;
-            margin-bottom: 2rem;
-        }
+        .hidden { display: none !important; }
 
         /* Timer Styles */
         .timer-container {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            width: 70px;
-            height: 70px;
+            top: 15px;
+            left: 15px;
+            width: 60px;
+            height: 60px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -107,15 +62,15 @@
         .timer-circle-bg {
             fill: none;
             stroke: #e5e7eb;
-            stroke-width: 4;
+            stroke-width: 5;
         }
 
         .timer-circle-progress {
             fill: none;
             stroke: var(--primary);
-            stroke-width: 4;
+            stroke-width: 5;
             stroke-linecap: round;
-            stroke-dasharray: 113; /* 2 * pi * 18 */
+            stroke-dasharray: 113;
             stroke-dashoffset: 0;
             transition: stroke-dashoffset 0.05s linear, stroke 0.2s;
         }
@@ -124,65 +79,44 @@
             position: absolute;
             font-weight: 800;
             color: var(--text-light);
-            font-size: 1.5rem;
+            font-size: 1.2rem;
         }
 
+        /* Main Card */
         .container {
             background-color: var(--card-bg);
-            padding: 2.5rem;
+            padding: 2rem;
             border-radius: 1.5rem;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
             text-align: center;
-            width: 100%;
+            width: 90%;
             max-width: 360px;
             transition: transform 0.2s;
+            /* Optimization: Ensure it fits on small SE screens */
+            box-sizing: border-box; 
         }
 
         h1 {
             font-size: 1.5rem;
             color: var(--text);
-            margin-top: 0;
-            margin-bottom: 0.5rem;
+            margin: 0 0 0.5rem 0;
             font-weight: 700;
         }
         
         p.subtitle {
             color: var(--text-light);
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             font-size: 0.9rem;
         }
 
-        /* Start Screen specific */
-        .instruction-list {
-            text-align: left;
-            margin: 2rem 0;
-            padding: 0;
-            list-style: none;
-            display: inline-block;
-        }
-
-        .instruction-list li {
-            margin-bottom: 0.8rem;
-            color: var(--text);
-            font-size: 1.05rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .icon-large {
-            font-size: 3.5rem;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-
+        /* Stats */
         .stats-container {
             display: flex;
             justify-content: space-between;
             background-color: #f9fafb;
             padding: 0.75rem 1rem;
-            border-radius: 0.75rem;
-            margin-bottom: 2rem;
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
             border: 1px solid #e5e7eb;
         }
 
@@ -193,7 +127,7 @@
         }
 
         .stat-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-light);
@@ -206,13 +140,15 @@
             color: var(--primary);
         }
 
+        /* Letter Display - Fluid Sizing */
         .letter-display {
-            font-size: 8rem;
+            /* Optimization: clamp scales font between 4rem and 8rem based on screen width */
+            font-size: clamp(5rem, 20vw, 8rem); 
             line-height: 1;
             font-weight: 800;
-            margin: 1rem 0;
+            margin: 0.5rem 0 1.5rem 0;
             color: var(--text);
-            height: 140px;
+            height: clamp(80px, 20vh, 140px);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -220,9 +156,10 @@
             user-select: none;
         }
 
+        /* Input */
         .input-group {
             position: relative;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         input[type="number"] {
@@ -237,6 +174,8 @@
             box-sizing: border-box;
             color: var(--text);
             transition: border-color 0.2s;
+            /* Optimization: Prevent iOS zoom on focus (needs 16px+ technically, but scale handled via meta) */
+            background: #fff; 
         }
 
         input[type="number"]:focus {
@@ -244,68 +183,67 @@
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
 
-        /* Remove spinner from number input */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
+        /* Button */
         .btn {
             background-color: var(--primary);
             color: white;
             border: none;
             padding: 1rem;
-            border-radius: 0.75rem;
+            border-radius: 1rem;
             font-size: 1.1rem;
             font-weight: 600;
             cursor: pointer;
             width: 100%;
             transition: background 0.2s, transform 0.1s;
+            /* Optimization: Improve touch target */
+            min-height: 54px; 
+            touch-action: manipulation;
         }
 
-        .btn:hover {
-            background-color: var(--primary-hover);
-        }
-
-        .btn:active {
-            transform: scale(0.98);
-        }
+        .btn:active { transform: scale(0.96); }
 
         .message {
             min-height: 1.5rem;
             margin-top: 1rem;
             font-weight: 600;
             font-size: 0.95rem;
-            white-space: pre-wrap; /* Allows line breaks */
+            white-space: pre-wrap;
         }
 
+        /* Hint Button */
         .hint-btn {
             background: none;
             border: none;
             color: var(--text-light);
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             cursor: pointer;
-            margin-top: 1.5rem;
-            text-decoration: none;
-            transition: color 0.2s;
+            margin-top: 1rem;
+            padding: 0.5rem;
             display: inline-flex;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.5rem;
         }
 
-        .hint-btn:hover {
-            color: var(--primary);
+        /* Start Screen Specific */
+        .instruction-list {
+            text-align: left;
+            margin: 1.5rem 0;
+            padding: 0;
+            list-style: none;
+            display: inline-block;
+        }
+        
+        .instruction-list li {
+            margin-bottom: 0.8rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         /* Animations */
-        .shake {
-            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-        }
-
-        .bounce {
-            animation: bounce 0.5s;
-        }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        .bounce { animation: bounce 0.5s; }
 
         @keyframes shake {
             10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -319,30 +257,67 @@
             40% {transform: translateY(-20px);}
             60% {transform: translateY(-10px);}
         }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.show { opacity: 1; }
         
-        /* Mobile optimization */
-        @media (max-width: 400px) {
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1.5rem;
+            text-align: center;
+            width: 85%;
+            max-width: 320px;
+            transform: scale(0.9);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        
+        .final-score-value {
+            font-size: 4rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 1.5rem;
+        }
+
+        /* --- CRITICAL MOBILE OPTIMIZATIONS --- */
+        
+        /* 1. Handling Landscape or Keyboard Open State */
+        @media (max-height: 600px) {
             .container {
-                padding: 1.5rem;
-                border-radius: 0;
-                height: 100vh;
+                padding: 1rem;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                box-shadow: none;
             }
             .letter-display {
-                font-size: 6rem;
-                height: 100px;
+                font-size: 3rem; /* Shrink drastically */
+                height: 60px;
+                margin: 0.2rem 0;
             }
+            h1 { font-size: 1.1rem; margin-bottom: 0; }
+            .subtitle { display: none; /* Hide non-essential */ }
+            .stats-container { margin-bottom: 0.5rem; padding: 0.5rem; }
+            .message { min-height: 1.2rem; margin-top: 0.5rem; }
+            .hint-btn { margin-top: 0.5rem; }
             .timer-container {
-                top: 10px;
-                left: 10px;
-                width: 50px;
-                height: 50px;
-            }
-            .timer-text {
-                font-size: 1rem;
+                top: 5px; left: 5px; width: 40px; height: 40px;
             }
         }
     </style>
@@ -352,12 +327,12 @@
 <!-- Start Screen -->
 <div id="start-screen" class="container">
     <h1>Alphabet Mastery</h1>
-    <p class="subtitle">A=1, B=2, ... Z=26</p>
+    <p class="subtitle">A=1, B=2 ... Z=26</p>
     
-    <div style="margin: 1.5rem 0;">
-        <span class="icon-large">🧠</span>
+    <div style="margin: 1rem 0;">
+        <span style="font-size: 3rem; display: block; margin-bottom: 0.5rem;">🧠</span>
         <ul class="instruction-list">
-            <li>⏱️ <strong>3 Seconds</strong> per letter</li>
+            <li>⏱️ <strong>3 Seconds</strong> / letter</li>
             <li>🔥 Build your <strong>Streak</strong></li>
             <li>💡 Use <strong>Hints</strong> if stuck</li>
         </ul>
@@ -366,7 +341,7 @@
     <button class="btn" onclick="startGame()">Start Training</button>
 </div>
 
-<!-- Timer Component (Initially Hidden) -->
+<!-- Timer Component -->
 <div id="timer-ui" class="timer-container hidden">
     <svg class="timer-svg" viewBox="0 0 40 40">
         <circle class="timer-circle-bg" cx="20" cy="20" r="18"></circle>
@@ -379,13 +354,13 @@
 <div id="game-over-modal" class="modal-overlay">
     <div class="modal-content">
         <h2>Time's Up!</h2>
-        <div class="final-score-label">Final Score</div>
+        <div style="color:var(--text-light); margin-bottom:0.5rem;">Final Score</div>
         <div id="final-score-display" class="final-score-value">0</div>
         <button id="restart-btn" class="btn" onclick="restartGame()">Play Again</button>
     </div>
 </div>
 
-<!-- Game Interface (Initially Hidden) -->
+<!-- Game Interface -->
 <div class="container hidden" id="game-container">
     <h1>Letter Trainer</h1>
     <p class="subtitle">Speed Drill: 3 seconds!</p>
@@ -404,7 +379,8 @@
     <div id="letter-display" class="letter-display">A</div>
 
     <div class="input-group">
-        <input type="number" id="user-input" placeholder="?" autocomplete="off" inputmode="numeric">
+        <!-- pattern="[0-9]*" triggers numeric keypad on iOS -->
+        <input type="number" id="user-input" placeholder="?" autocomplete="off" inputmode="numeric" pattern="[0-9]*">
     </div>
     
     <button class="btn" onclick="checkAnswer()">Submit</button>
@@ -448,14 +424,14 @@
     const restartBtn = document.getElementById('restart-btn');
     const finalScoreDisplay = document.getElementById('final-score-display');
 
-    // Load high score from local storage if available
+    // Load high score
     const savedScore = localStorage.getItem('alphabet-high-score');
     if (savedScore) {
         highScore = parseInt(savedScore);
         highScoreEl.innerText = highScore;
     }
 
-    // Event Listener for "Enter" key
+    // Input Event Listeners
     userInput.addEventListener("keypress", function(event) {
         if (event.key === "Enter") {
             checkAnswer();
@@ -463,22 +439,16 @@
     });
 
     function startGame() {
-        // Hide Start Screen
         startScreen.classList.add('hidden');
-        
-        // Show Game Elements
         gameContainer.classList.remove('hidden');
         timerUI.classList.remove('hidden');
-        
-        // Start Game Logic
         generateLetter();
     }
 
     function startTimer() {
         const startTime = Date.now();
-        const totalLength = 113; // 2 * pi * 18 approx
+        const totalLength = 113; 
         
-        // Reset Timer UI
         timerPath.style.stroke = "var(--primary)";
         timerPath.style.strokeDashoffset = 0;
         timerText.innerText = Math.ceil(TIME_LIMIT_MS / 1000);
@@ -489,24 +459,20 @@
             const elapsed = Date.now() - startTime;
             timeLeft = Math.max(0, TIME_LIMIT_MS - elapsed);
             
-            // Update Text
             timerText.innerText = Math.ceil(timeLeft / 1000);
             
-            // Update Circle Progress
             const offset = (elapsed / TIME_LIMIT_MS) * totalLength;
             timerPath.style.strokeDashoffset = offset;
             
-            // Warning Color
             if (timeLeft < 1000) {
                 timerPath.style.stroke = "var(--error)";
             }
 
-            // Timeout Logic
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 handleTimeout();
             }
-        }, 30); // Update frequency
+        }, 30);
     }
 
     function stopTimer() {
@@ -514,49 +480,41 @@
     }
 
     function handleTimeout() {
-        if (isProcessing) return; // Prevent double trigger
+        if (isProcessing) return;
         isProcessing = true;
         
-        stopTimer(); // Ensure timer stops
-        userInput.blur();
+        stopTimer();
+        userInput.blur(); // Hide keyboard to see modal
         
         const correctVal = currentLetter.charCodeAt(0) - 64;
         
-        // UI Feedback (Background)
         letterDisplay.style.color = "var(--error)";
         messageEl.innerText = `Time's Up! It was ${correctVal}`;
         messageEl.style.color = "var(--error)";
         
-        // Show Modal
         finalScoreDisplay.innerText = currentStreak;
         modal.style.display = 'flex';
         
-        // Trigger reflow/animation
         setTimeout(() => {
             modal.classList.add('show');
-            restartBtn.focus(); // Focus button so Enter key works
+            restartBtn.focus();
         }, 10);
     }
     
     function restartGame() {
-        // Hide Modal
         modal.classList.remove('show');
-        
         setTimeout(() => {
             modal.style.display = 'none';
-            // Reset Game Logic
             currentStreak = 0;
             updateStats();
             generateLetter();
-        }, 200); // Wait for transition
+        }, 200);
     }
 
     function generateLetter() {
-        // Generate random number between 0 and 25
         let randomNum = Math.floor(Math.random() * 26);
         let newLetter = String.fromCharCode(65 + randomNum);
         
-        // Avoid repeating the same letter twice immediately
         while (newLetter === currentLetter) {
             randomNum = Math.floor(Math.random() * 26);
             newLetter = String.fromCharCode(65 + randomNum);
@@ -564,16 +522,14 @@
         
         currentLetter = newLetter;
         
-        // Update UI
         letterDisplay.innerText = currentLetter;
         letterDisplay.style.color = "var(--text)";
-        letterDisplay.classList.remove('bounce'); // Ensure clean state
+        letterDisplay.classList.remove('bounce');
         userInput.value = '';
         messageEl.innerText = '';
         userInput.focus();
         isProcessing = false;
         
-        // Start the timer
         startTimer();
     }
 
@@ -581,7 +537,7 @@
         if (isProcessing) return;
         
         const userVal = parseInt(userInput.value);
-        const correctVal = currentLetter.charCodeAt(0) - 64; // A(65) - 64 = 1
+        const correctVal = currentLetter.charCodeAt(0) - 64;
 
         if (isNaN(userVal)) {
             messageEl.innerText = "Type a number!";
@@ -589,7 +545,7 @@
             return;
         }
 
-        stopTimer(); // Stop timer immediately on submission
+        stopTimer();
         isProcessing = true;
 
         if (userVal === correctVal) {
@@ -600,13 +556,11 @@
     }
 
     function handleSuccess() {
-        // UI Feedback
         letterDisplay.style.color = "var(--success)";
         letterDisplay.classList.add('bounce');
         messageEl.innerText = getRandomPraise();
         messageEl.style.color = "var(--success)";
         
-        // Update Stats
         currentStreak++;
         if (currentStreak > highScore) {
             highScore = currentStreak;
@@ -614,35 +568,28 @@
         }
         updateStats();
 
-        // Remove bounce class after animation
         setTimeout(() => {
             letterDisplay.classList.remove('bounce');
         }, 500);
 
-        // Next Question after short delay
         setTimeout(generateLetter, 600);
     }
 
     function handleFailure(correctAnswer) {
-        // UI Feedback
         letterDisplay.style.color = "var(--error)";
         messageEl.innerText = `Wrong! ${currentLetter} is ${correctAnswer}`;
         messageEl.style.color = "var(--error)";
         
-        // Shake Animation
         container.classList.add('shake');
         setTimeout(() => {
             container.classList.remove('shake');
         }, 500);
 
-        // Reset Streak (Soft Reset - allows continuing)
         currentStreak = 0;
         updateStats();
         
-        // Clear input to try again
         userInput.value = '';
         
-        // Allow time to read the correction before generating new letter
         setTimeout(() => {
              generateLetter();
         }, 2000);
@@ -657,7 +604,6 @@
         const val = currentLetter.charCodeAt(0) - 64;
         let hint = "";
         
-        // Comprehensive hints
         if (["E", "J", "O", "T", "Y"].includes(currentLetter)) hint = "Part of EJOTY (Multiples of 5)";
         else if (currentLetter === "F") hint = "F sounds like Fix (6)";
         else if (currentLetter === "G") hint = "Look at the tail (It draws a 7)";
