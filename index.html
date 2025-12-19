@@ -2,18 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Canvas Alphabet Trainer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+    <title>Canvas Math Blitz</title>
     <style>
         body {
             margin: 0;
-            overflow: hidden; /* Prevent scrolling */
-            background-color: #F9F7F1; /* Warm paper background */
-            touch-action: none; /* Prevent browser zooming/swiping */
-            font-family: 'Courier New', Courier, monospace; /* Monospace for technical feel, or system if unavailable */
+            overflow: hidden;
+            background-color: #F9F7F1;
+            touch-action: none;
+            font-family: 'Courier New', Courier, monospace; 
+            /* Prevent iOS tap highlight */
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Hidden input for keyboard on mobile */
         #hidden-input {
             position: absolute;
             opacity: 0;
@@ -33,45 +34,106 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            z-index: 10;
+        }
+
+        /* Container for menu buttons */
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px; 
+            /* Push down further to avoid overlap with canvas text */
+            margin-top: 20vh; 
+            pointer-events: auto;
+            transform-origin: center top;
         }
 
         .btn {
             pointer-events: auto;
-            background-color: #2D2D2D; /* Dark Charcoal */
+            background-color: #2D2D2D; 
             color: #F9F7F1;
             border: 3px solid #2D2D2D;
-            padding: 1rem 2.5rem;
-            border-radius: 0; /* Sharp edges */
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
             cursor: pointer;
-            box-shadow: 6px 6px 0px rgba(0,0,0,0.15); /* Hard shadow */
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.15);
             transition: transform 0.1s, box-shadow 0.1s;
-            display: none;
-            margin-top: 220px;
+            display: none; 
+            min-width: 260px;
+            text-align: center;
+            position: relative;
+            user-select: none;
         }
         
         .btn:active { 
             transform: translate(2px, 2px);
-            box-shadow: 4px 4px 0px rgba(0,0,0,0.15);
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.15);
+        }
+
+        .btn span.subtitle {
+            display: block;
+            font-size: 0.7rem;
+            font-family: 'Courier New', monospace;
+            opacity: 0.7;
+            margin-top: 4px;
+            font-weight: bold;
+            letter-spacing: 0;
+            text-transform: none;
         }
         
         .btn.visible { display: block; }
         
+        /* Game Over buttons */
+        .game-over-btns {
+            /* Position below score */
+            margin-top: 15vh;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: auto;
+        }
+        .game-over-btns.visible { display: flex; }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 600px) {
+            .btn { min-width: 220px; padding: 0.7rem 1rem; font-size: 0.9rem; }
+            /* Increased margin-top to clear title text */
+            .menu-container { margin-top: 18vh; gap: 10px; } 
+            .game-over-btns { margin-top: 12vh; }
+        }
+
+        /* Short screens (Landscape or small phones) */
         @media (max-height: 600px) {
-            .btn { margin-top: 160px; padding: 0.8rem 1.5rem; }
+            .menu-container { margin-top: 15vh; gap: 8px; zoom: 0.85; }
+            .game-over-btns { margin-top: 10vh; zoom: 0.85; }
         }
     </style>
 </head>
 <body>
 
     <canvas id="gameCanvas"></canvas>
-    <input type="number" id="hidden-input" pattern="[0-9]*" inputmode="numeric">
+    <!-- Prevent zoom on input focus -->
+    <input type="number" id="hidden-input" pattern="[0-9]*" inputmode="numeric" style="font-size: 16px;">
+    
     <div id="ui-layer">
-        <button id="main-btn" class="btn">START</button>
+        <!-- Main Menu Buttons -->
+        <div id="menu-group" class="menu-container">
+            <button id="btn-mode-1" class="btn">Multiplication <span class="subtitle">10-20 × 1-10</span></button>
+            <button id="btn-mode-2" class="btn">Square <span class="subtitle">10-30²</span></button>
+            <button id="btn-mode-3" class="btn">Cube <span class="subtitle">10-20³</span></button>
+            <button id="btn-mode-4" class="btn">Alphabet <span class="subtitle">A=1 ... Z=26</span></button>
+        </div>
+
+        <!-- Game Over Buttons -->
+        <div id="go-group" class="game-over-btns">
+            <button id="btn-retry" class="btn">Start Over</button>
+            <button id="btn-menu" class="btn">Other Game</button>
+        </div>
     </div>
 
 <script>
@@ -81,34 +143,53 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const hiddenInput = document.getElementById('hidden-input');
-    const mainBtn = document.getElementById('main-btn');
+    
+    // UI Elements
+    const menuGroup = document.getElementById('menu-group');
+    const goGroup = document.getElementById('go-group');
+    const btnMode1 = document.getElementById('btn-mode-1');
+    const btnMode2 = document.getElementById('btn-mode-2');
+    const btnMode3 = document.getElementById('btn-mode-3');
+    const btnMode4 = document.getElementById('btn-mode-4');
+    const btnRetry = document.getElementById('btn-retry');
+    const btnMenu = document.getElementById('btn-menu');
 
     // Artistic Palette
     const COLORS = {
-        bg: '#F9F7F1',      // Warm White
-        card: '#FFFFFF',    // Pure White
-        ink: '#2D2D2D',     // Charcoal (Text/Outlines)
-        accent: '#FF6B6B',  // Coral Red (Timer/Highlights)
-        success: '#4ECDC4', // Teal
-        error: '#FF6B6B',   // Red
-        grid: '#E5E0D8'     // Subtle Grid
+        bg: '#F9F7F1',      
+        card: '#FFFFFF',    
+        ink: '#2D2D2D',     
+        accent: '#FF6B6B',  
+        success: '#4ECDC4', 
+        error: '#FF6B6B',   
+        grid: '#E5E0D8'     
     };
 
     const STATE = { MENU: 0, PLAYING: 1, GAMEOVER: 2 };
+    const MODES = { MULT: 1, SQUARE: 2, CUBE: 3, ALPHA: 4 };
 
     let gameState = STATE.MENU;
+    let currentMode = MODES.MULT;
     let width, height, dpr;
     
     // Gameplay
-    let currentLetter = 'A';
+    let problemParts = { part1: "2", op: "×", part2: "2", type: "standard" }; 
+    let currentAnswer = 4;
     let currentStreak = 0;
-    let highScore = parseInt(localStorage.getItem('canvas-alpha-score') || '0');
-    let timeLeft = 3000;
-    const TIME_LIMIT = 3000;
+    
+    let highScores = {
+        [MODES.MULT]: parseInt(localStorage.getItem('math-mult-score') || '0'),
+        [MODES.SQUARE]: parseInt(localStorage.getItem('math-sq-score') || '0'),
+        [MODES.CUBE]: parseInt(localStorage.getItem('math-cube-score') || '0'),
+        [MODES.ALPHA]: parseInt(localStorage.getItem('math-alpha-score') || '0'),
+    };
+
+    let timeLeft = 0;
+    const TIME_LIMIT = 4000; 
     let lastTime = 0;
     let messageText = "";
     let messageColor = COLORS.ink;
-    let letterScale = 1;
+    let scaleAnim = 1;
     
     // Visual Elements
     let particles = [];
@@ -121,21 +202,22 @@
         resize();
         window.addEventListener('resize', resize);
         
-        // Initialize Background Art Elements
-        for(let i=0; i<8; i++) {
+        const symbols = ['1', '2', '3', '×', '²', '³', 'A', 'Z', 'M', '7', '8', '9'];
+        for(let i=0; i<15; i++) {
             backgroundElements.push({
-                char: Math.random() > 0.5 ? String.fromCharCode(65 + Math.floor(Math.random()*26)) : Math.floor(Math.random()*26).toString(),
+                char: symbols[Math.floor(Math.random() * symbols.length)],
                 x: Math.random() * width,
                 y: Math.random() * height,
                 vx: (Math.random() - 0.5) * 0.2,
                 vy: (Math.random() - 0.5) * 0.2,
-                size: 50 + Math.random() * 150,
+                size: 40 + Math.random() * 100,
                 rotation: Math.random() * Math.PI * 2,
                 vRot: (Math.random() - 0.5) * 0.002,
                 opacity: 0.03 + Math.random() * 0.05
             });
         }
         
+        setMenuState();
         requestAnimationFrame(loop);
     }
 
@@ -151,87 +233,152 @@
     }
 
     /**
-     * INPUT
+     * INPUT & CONTROLS
      */
-    canvas.addEventListener('mousedown', (e) => handleInputFocus(e.clientX, e.clientY));
+    // Use click/touchend to avoid ghost clicks, ensure keyboard pops
+    const triggerFocus = (e) => {
+        // Only trigger if playing
+        if (gameState !== STATE.PLAYING) return;
+        
+        // Don't steal focus if clicking a button (though UI layer covers canvas mostly)
+        if (e.target.tagName === 'BUTTON') return;
+
+        hiddenInput.focus();
+    };
+
+    canvas.addEventListener('mousedown', triggerFocus);
     canvas.addEventListener('touchstart', (e) => {
-        handleInputFocus(e.touches[0].clientX, e.touches[0].clientY);
+        // Prevent default zoom or scroll on game area
+        // e.preventDefault(); 
+        triggerFocus(e);
     }, {passive: false});
 
-    function handleInputFocus(x, y) {
-        if (gameState !== STATE.PLAYING) return;
-        // Hitbox for input area
-        if (Math.abs(y - (height/2 + 60)) < 60) hiddenInput.focus();
-    }
-
-    mainBtn.addEventListener('click', () => {
-        if (gameState !== STATE.PLAYING) startGame();
-    });
+    // Button Listeners
+    btnMode1.addEventListener('click', () => startGame(MODES.MULT));
+    btnMode2.addEventListener('click', () => startGame(MODES.SQUARE));
+    btnMode3.addEventListener('click', () => startGame(MODES.CUBE));
+    btnMode4.addEventListener('click', () => startGame(MODES.ALPHA));
+    
+    btnRetry.addEventListener('click', () => startGame(currentMode));
+    btnMenu.addEventListener('click', setMenuState);
 
     hiddenInput.addEventListener('input', (e) => {
         if (gameState !== STATE.PLAYING) { hiddenInput.value = ''; return; }
 
         const valStr = e.target.value;
         const valNum = parseInt(valStr);
-        const correctVal = currentLetter.charCodeAt(0) - 64;
+        const ansStr = currentAnswer.toString();
 
-        if (isNaN(valNum)) return;
+        if (isNaN(valNum) && valStr !== '') {
+            hiddenInput.value = '';
+            return;
+        }
 
-        if (valNum === correctVal) {
+        if (valNum === currentAnswer) {
             triggerSuccess();
-        } else if ((valStr.length >= 2 && valNum !== correctVal) || 
-                   (correctVal < 10 && valStr.length === 1 && valNum !== correctVal) || 
-                   (valNum > 26)) {
-            triggerFail(correctVal);
+        } else if (valStr.length > ansStr.length) {
+            triggerFail(currentAnswer);
         }
     });
 
     /**
      * GAME LOGIC
      */
-    function startGame() {
-        gameState = STATE.PLAYING;
-        currentStreak = 0;
-        mainBtn.classList.remove('visible');
-        hiddenInput.value = '';
-        hiddenInput.focus();
-        generateLetter();
+    function setMenuState() {
+        gameState = STATE.MENU;
+        hiddenInput.blur();
+        
+        btnMode1.classList.add('visible');
+        btnMode2.classList.add('visible');
+        btnMode3.classList.add('visible');
+        btnMode4.classList.add('visible');
+        menuGroup.style.display = 'flex';
+
+        goGroup.classList.remove('visible');
+        btnRetry.classList.remove('visible');
+        btnMenu.classList.remove('visible');
     }
 
-    function generateLetter() {
-        let randomNum = Math.floor(Math.random() * 26);
-        let newLetter = String.fromCharCode(65 + randomNum);
-        while (newLetter === currentLetter) {
-            randomNum = Math.floor(Math.random() * 26);
-            newLetter = String.fromCharCode(65 + randomNum);
+    function startGame(mode) {
+        gameState = STATE.PLAYING;
+        currentMode = mode;
+        currentStreak = 0;
+        
+        btnMode1.classList.remove('visible');
+        btnMode2.classList.remove('visible');
+        btnMode3.classList.remove('visible');
+        btnMode4.classList.remove('visible');
+        menuGroup.style.display = 'none';
+
+        goGroup.classList.remove('visible');
+        btnRetry.classList.remove('visible');
+        btnMenu.classList.remove('visible');
+        
+        // Small timeout ensures the keyboard has time to trigger on mobile after touch
+        setTimeout(() => {
+            hiddenInput.value = '';
+            hiddenInput.focus();
+        }, 10);
+        
+        generateProblem();
+    }
+
+    function generateProblem() {
+        let a, b;
+        
+        if (currentMode === MODES.MULT) {
+            a = Math.floor(Math.random() * (20 - 10 + 1)) + 10;
+            b = Math.floor(Math.random() * 10) + 1;
+            currentAnswer = a * b;
+            problemParts = { part1: a, op: "×", part2: b, type: "standard" };
+        } 
+        else if (currentMode === MODES.SQUARE) {
+            a = Math.floor(Math.random() * (30 - 10 + 1)) + 10;
+            currentAnswer = a * a;
+            problemParts = { part1: a, op: "²", part2: "", type: "power" };
+        } 
+        else if (currentMode === MODES.CUBE) {
+            a = Math.floor(Math.random() * (20 - 10 + 1)) + 10;
+            currentAnswer = a * a * a;
+            problemParts = { part1: a, op: "³", part2: "", type: "power" };
         }
-        currentLetter = newLetter;
+        else if (currentMode === MODES.ALPHA) {
+            const charCode = Math.floor(Math.random() * 26) + 65;
+            const letter = String.fromCharCode(charCode);
+            currentAnswer = charCode - 64; 
+            problemParts = { part1: letter, type: "alpha" };
+        }
+
         timeLeft = TIME_LIMIT;
         hiddenInput.value = '';
-        letterScale = 0.5; // Start small for pop-in
+        scaleAnim = 0.5; 
         messageText = "";
     }
 
     function triggerSuccess() {
         currentStreak++;
-        if (currentStreak > highScore) {
-            highScore = currentStreak;
-            localStorage.setItem('canvas-alpha-score', highScore);
+        if (currentStreak > highScores[currentMode]) {
+            highScores[currentMode] = currentStreak;
+            if(currentMode === MODES.MULT) localStorage.setItem('math-mult-score', currentStreak);
+            if(currentMode === MODES.SQUARE) localStorage.setItem('math-sq-score', currentStreak);
+            if(currentMode === MODES.CUBE) localStorage.setItem('math-cube-score', currentStreak);
+            if(currentMode === MODES.ALPHA) localStorage.setItem('math-alpha-score', currentStreak);
         }
         createParticles(width/2, height/2, COLORS.success);
-        generateLetter();
+        generateProblem();
     }
 
     function triggerFail(correctAnswer) {
-        messageText = `${currentLetter} is ${correctAnswer}`;
+        messageText = `Ans: ${correctAnswer}`;
         messageColor = COLORS.error;
         endGame();
     }
 
     function endGame() {
         gameState = STATE.GAMEOVER;
-        mainBtn.innerText = "PLAY AGAIN";
-        mainBtn.classList.add('visible');
+        goGroup.classList.add('visible');
+        btnRetry.classList.add('visible');
+        btnMenu.classList.add('visible');
         hiddenInput.blur();
     }
 
@@ -245,7 +392,7 @@
                 vx: (Math.random() - 0.5) * 12,
                 vy: (Math.random() - 0.5) * 12,
                 life: 1.0,
-                color: Math.random() > 0.5 ? color : COLORS.ink, // Mix with black confetti
+                color: Math.random() > 0.5 ? color : COLORS.ink, 
                 size: Math.random() * 8 + 4,
                 type: Math.random() > 0.5 ? 'rect' : 'circle',
                 rotation: Math.random() * Math.PI
@@ -259,16 +406,13 @@
             p.x += p.vx; p.y += p.vy;
             p.life -= 0.04;
             p.rotation += 0.1;
-            
             if (p.life <= 0) { particles.splice(i, 1); continue; }
 
             ctx.globalAlpha = p.life;
             ctx.fillStyle = p.color;
-            
             ctx.save();
             ctx.translate(p.x, p.y);
             ctx.rotate(p.rotation);
-            
             if (p.type === 'rect') {
                 ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
             } else {
@@ -282,14 +426,29 @@
     }
 
     /**
-     * DRAWING - ARTISTIC STYLE
+     * DRAWING HELPERS (SCALED FOR MOBILE)
      */
+    
+    // Calculates a scale factor to fit the game UI into the current window height
+    // This is crucial when the keyboard opens and reduces height
+    function getFitScale() {
+        // Target dimensions for optimal view
+        const targetH = 550; 
+        const targetW = 400;
+        
+        // Calculate scale ratios
+        const scaleH = height / targetH;
+        const scaleW = width / targetW;
+        
+        // Use the smaller scale, capped at 1.0 (don't zoom in on huge screens)
+        // Reserve a little padding (0.9)
+        return Math.min(1.0, scaleH * 0.9, scaleW * 0.9);
+    }
+
     function drawBackground() {
-        // 1. Paper texture / Grid
         ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, width, height);
 
-        // Draw Grid
         ctx.strokeStyle = COLORS.grid;
         ctx.lineWidth = 1;
         const gridSize = 40;
@@ -298,13 +457,10 @@
         for(let y=0; y<height; y+=gridSize) { ctx.moveTo(0,y); ctx.lineTo(width,y); }
         ctx.stroke();
 
-        // 2. Floating Typographic Elements
         ctx.save();
         backgroundElements.forEach(el => {
             el.x += el.vx; el.y += el.vy;
             el.rotation += el.vRot;
-            
-            // Wrap around screen
             if (el.x < -100) el.x = width + 100;
             if (el.x > width + 100) el.x = -100;
             if (el.y < -100) el.y = height + 100;
@@ -314,7 +470,7 @@
             ctx.rotate(el.rotation);
             ctx.fillStyle = COLORS.ink;
             ctx.globalAlpha = el.opacity;
-            ctx.font = `bold ${el.size}px sans-serif`;
+            ctx.font = `bold ${el.size}px sans-serif`; 
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillText(el.char, 0, 0);
@@ -326,164 +482,198 @@
     }
 
     function drawHardShadowRect(x, y, w, h) {
-        // Hard Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.fillStyle = 'rgba(45, 45, 45, 0.1)';
         ctx.fillRect(x + 10, y + 10, w, h);
-        
-        // Main Box
         ctx.fillStyle = COLORS.card;
         ctx.fillRect(x, y, w, h);
-        
-        // Stroke
         ctx.strokeStyle = COLORS.ink;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 4;
         ctx.strokeRect(x, y, w, h);
     }
 
     function drawGame(dt) {
-        const cardW = Math.min(width * 0.85, 380);
-        const cardH = 480;
-        const cardX = (width - cardW) / 2;
-        const cardY = (height - cardH) / 2;
-        const cx = width / 2;
-        const cy = height / 2;
+        // MOBILE FIX: Scale the entire game drawing context
+        const fitScale = getFitScale();
+        
+        ctx.save();
+        ctx.translate(width / 2, height / 2);
+        ctx.scale(fitScale, fitScale);
+        
+        // Define Card Size relative to this centered, scaled context
+        const cardW = 400;
+        const cardH = 500;
+        const cx = 0; // Center relative to translate
+        const cy = 0;
+        
+        // Draw Card centered
+        drawHardShadowRect(-cardW/2, -cardH/2, cardW, cardH);
 
-        drawHardShadowRect(cardX, cardY, cardW, cardH);
-
-        // Stats Header
-        ctx.font = "bold 12px 'Courier New', monospace";
-        ctx.fillStyle = "#888"; // Lighter grey for labels
+        // Stats
+        ctx.font = "bold 14px 'Courier New', monospace";
+        ctx.fillStyle = "#999"; 
         ctx.textAlign = "center";
-        ctx.fillText("STREAK", cx - 70, cardY + 50);
-        ctx.fillText("BEST", cx + 70, cardY + 50);
+        ctx.fillText("STREAK", cx - 90, cy - 200);
+        ctx.fillText("BEST", cx + 90, cy - 200);
 
-        ctx.font = "bold 24px sans-serif";
+        ctx.font = "bold 30px sans-serif";
         ctx.fillStyle = COLORS.ink;
-        ctx.fillText(currentStreak, cx - 70, cardY + 75);
-        ctx.fillText(highScore, cx + 70, cardY + 75);
+        ctx.fillText(currentStreak, cx - 90, cy - 170);
+        ctx.fillText(highScores[currentMode], cx + 90, cy - 170);
 
         // Timer Ring
-        const radius = 60;
+        const radius = 120; 
         const progress = Math.max(0, timeLeft / TIME_LIMIT);
         
-        // Timer Background Ring
         ctx.beginPath();
-        ctx.arc(cx, cy - 30, radius + 15, 0, Math.PI*2);
+        ctx.arc(cx, cy - 40, radius + 15, 0, Math.PI*2);
         ctx.strokeStyle = "#eee";
-        ctx.lineWidth = 10;
+        ctx.lineWidth = 8;
         ctx.stroke();
 
-        // Timer Active Ring
         ctx.beginPath();
-        ctx.arc(cx, cy - 30, radius + 15, -Math.PI/2, -Math.PI/2 + (Math.PI*2 * progress));
+        ctx.arc(cx, cy - 40, radius + 15, -Math.PI/2, -Math.PI/2 + (Math.PI*2 * progress));
         ctx.strokeStyle = progress < 0.25 ? COLORS.error : COLORS.accent;
-        ctx.lineWidth = 10;
+        ctx.lineWidth = 8;
         ctx.stroke();
 
-        // Decorative Ticks on Timer
+        // MATH/ALPHA PROBLEM
         ctx.save();
-        ctx.translate(cx, cy-30);
-        ctx.strokeStyle = COLORS.ink;
-        ctx.lineWidth = 2;
-        for(let i=0; i<12; i++) {
-            ctx.rotate(Math.PI/6);
-            ctx.beginPath();
-            ctx.moveTo(0, radius + 22);
-            ctx.lineTo(0, radius + 26);
-            ctx.stroke();
+        ctx.translate(cx, cy - 40);
+        ctx.scale(scaleAnim, scaleAnim);
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = COLORS.ink;
+
+        const numberFont = "900 65px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+        const opFont = "500 55px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"; 
+        const alphaFont = "900 120px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+        if (problemParts.type === "standard") {
+            ctx.font = numberFont;
+            const w1 = ctx.measureText(problemParts.part1).width;
+            const w2 = ctx.measureText(problemParts.part2).width;
+            ctx.font = opFont;
+            const wOp = ctx.measureText(problemParts.op).width;
+            const gap = 20; 
+            const totalW = w1 + gap + wOp + gap + w2;
+            const startX = -totalW / 2;
+
+            ctx.textAlign = "left";
+            ctx.fillText(problemParts.part1, startX, 4);
+            ctx.font = opFont;
+            ctx.fillText(problemParts.op, startX + w1 + gap, 4);
+            ctx.font = numberFont;
+            ctx.fillText(problemParts.part2, startX + w1 + gap + wOp + gap, 4);
+
+        } else if (problemParts.type === "power") {
+            ctx.font = numberFont;
+            const w1 = ctx.measureText(problemParts.part1).width;
+            const superFont = "900 40px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+            ctx.font = superFont;
+            const wOp = ctx.measureText(problemParts.op).width;
+            const totalW = w1 + wOp;
+            const startX = -totalW / 2;
+
+            ctx.textAlign = "left";
+            ctx.fillText(problemParts.part1, startX, 4);
+            ctx.font = superFont;
+            ctx.fillText(problemParts.op, startX + w1, -20);
+        
+        } else if (problemParts.type === "alpha") {
+            ctx.font = alphaFont;
+            ctx.textAlign = "center";
+            ctx.fillText(problemParts.part1, 0, 10);
         }
         ctx.restore();
 
-        // The Letter
-        ctx.save();
-        ctx.translate(cx, cy - 30);
-        ctx.scale(letterScale, letterScale);
-        ctx.font = "900 100px sans-serif"; // Heavier weight
-        ctx.fillStyle = COLORS.ink;
-        ctx.textBaseline = "middle";
-        ctx.fillText(currentLetter, 0, 5);
-        ctx.restore();
-
         // Input Line
-        const boxY = cy + 80;
+        const boxY = cy + 130; 
+        const lineLen = 80;
         ctx.beginPath();
-        ctx.moveTo(cx - 50, boxY + 20);
-        ctx.lineTo(cx + 50, boxY + 20);
+        ctx.moveTo(cx - lineLen, boxY + 20);
+        ctx.lineTo(cx + lineLen, boxY + 20);
         ctx.strokeStyle = document.activeElement === hiddenInput ? COLORS.accent : '#CCC';
         ctx.lineWidth = 4;
         ctx.stroke();
 
         // User Input
-        ctx.font = "bold 40px 'Courier New', monospace";
+        ctx.font = "bold 45px 'Courier New', monospace";
+        ctx.textAlign = "center";
         ctx.fillStyle = COLORS.ink;
         ctx.fillText(hiddenInput.value, cx, boxY + 10);
 
         // Feedback Text
         if (messageText) {
-            ctx.font = "bold 16px sans-serif";
+            ctx.font = "bold 20px sans-serif";
             ctx.fillStyle = messageColor;
-            ctx.fillText(messageText, cx, boxY + 50);
+            ctx.fillText(messageText, cx, boxY + 60);
         } else {
-             // Subtle hint
-             ctx.font = "italic 14px serif";
+             ctx.font = "italic 16px serif";
              ctx.fillStyle = "#AAA";
-             ctx.fillText("type value...", cx, boxY + 50);
+             ctx.fillText(currentMode === MODES.ALPHA ? "place value..." : "calculate...", cx, boxY + 60);
         }
+
+        ctx.restore(); // Restore scale/translate
     }
 
     function drawMenu() {
-        const cx = width / 2;
-        const cy = height / 2;
-        const cardW = Math.min(width * 0.85, 380);
-        const cardH = 400;
+        const fitScale = getFitScale();
         
-        drawHardShadowRect((width - cardW)/2, (height - cardH)/2, cardW, cardH);
+        ctx.save();
+        ctx.translate(width / 2, height / 2);
+        ctx.scale(fitScale, fitScale);
+        
+        const cardW = 400;
+        const cardH = 550;
+        
+        drawHardShadowRect(-cardW/2, -cardH/2, cardW, cardH);
 
         ctx.fillStyle = COLORS.ink;
-        ctx.font = "900 32px sans-serif";
+        ctx.font = "900 40px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("ALPHABET", cx, cy - 60);
+        // Title positioned higher up
+        ctx.fillText("MATH", 0, -210);
         ctx.fillStyle = COLORS.accent;
-        ctx.fillText("MASTERY", cx, cy - 25);
+        ctx.fillText("BLITZ", 0, -170);
 
-        ctx.font = "16px 'Courier New', monospace";
+        ctx.font = "14px 'Courier New', monospace";
         ctx.fillStyle = "#666";
-        ctx.fillText("A=1  B=2  ...  Z=26", cx, cy + 20);
+        ctx.fillText("SELECT CHALLENGE", 0, -130);
         
-        mainBtn.classList.add('visible');
-        mainBtn.innerText = "START";
+        ctx.restore();
     }
 
     function drawGameOver() {
-        const cx = width / 2;
-        const cy = height / 2;
-        const cardW = Math.min(width * 0.85, 380);
-        const cardH = 450;
+        const fitScale = getFitScale();
+        
+        ctx.save();
+        ctx.translate(width / 2, height / 2);
+        ctx.scale(fitScale, fitScale);
+        
+        const cardW = 400;
+        const cardH = 500;
 
-        drawHardShadowRect((width - cardW)/2, (height - cardH)/2, cardW, cardH);
+        drawHardShadowRect(-cardW/2, -cardH/2, cardW, cardH);
 
         ctx.fillStyle = COLORS.error;
         ctx.font = "900 36px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("TIME'S UP", cx, cy - 80);
+        ctx.fillText("TIME'S UP", 0, -150);
 
         ctx.fillStyle = COLORS.ink;
         ctx.font = "bold 14px 'Courier New', monospace";
-        ctx.fillText("FINAL SCORE", cx, cy - 40);
+        ctx.fillText("FINAL SCORE", 0, -110);
 
-        ctx.font = "900 80px sans-serif";
+        ctx.font = "900 90px sans-serif";
         ctx.fillStyle = COLORS.ink;
-        ctx.fillText(currentStreak, cx, cy + 30);
+        ctx.fillText(currentStreak, 0, -20);
         
-        // Hint at correct answer if lost
         if (messageText) {
-            ctx.font = "bold 16px sans-serif";
+            ctx.font = "bold 26px sans-serif";
             ctx.fillStyle = COLORS.error;
-            ctx.fillText(messageText, cx, cy + 70);
+            ctx.fillText(messageText, 0, 40);
         }
-
-        mainBtn.classList.add('visible');
-        mainBtn.innerText = "RETRY";
+        
+        ctx.restore();
     }
 
     function loop(timestamp) {
@@ -495,8 +685,8 @@
 
         if (gameState === STATE.PLAYING) {
             timeLeft -= dt;
-            if (timeLeft <= 0) { timeLeft = 0; triggerFail(currentLetter.charCodeAt(0) - 64); }
-            if (letterScale < 1) { letterScale += 0.08; if (letterScale > 1) letterScale = 1; }
+            if (timeLeft <= 0) { timeLeft = 0; triggerFail(currentAnswer); }
+            if (scaleAnim < 1) { scaleAnim += 0.08; if (scaleAnim > 1) scaleAnim = 1; }
             drawGame(dt);
         } else if (gameState === STATE.MENU) {
             drawMenu();
